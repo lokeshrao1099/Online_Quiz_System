@@ -610,7 +610,7 @@ public class WebQuizUI {
         StringBuilder html = startPage(test.getTitle());
         appendTopbar(html, test.getTitle(), student);
         long remainingSeconds = Math.max(0, (attempt.getDeadlineMs() - System.currentTimeMillis()) / 1000);
-        html.append("<section class=\"exam-lock\" id=\"examLock\"><h2>Mandatory Exam Mode</h2><p>Questions are hidden until fullscreen starts. If you exit fullscreen after the test starts, this attempt will be canceled.</p>")
+        html.append("<section class=\"exam-lock\" id=\"examLock\"><h2>Mandatory Exam Mode</h2><p>Questions are hidden until fullscreen starts. If you exit fullscreen 3 times after the test starts, this attempt will be terminated.</p>")
                 .append("<button class=\"submit-button\" type=\"button\" id=\"startExam\">Start Fullscreen Test</button></section>");
         html.append("<section class=\"timer-bar\"><strong id=\"timer\"></strong><span>")
                 .append(test.getTimeLimitMinutes()).append(" minute test</span><span>Attempt ")
@@ -626,7 +626,7 @@ public class WebQuizUI {
         html.append("<button class=\"submit-button\" type=\"submit\">Submit Test</button></form>");
         html.append("<script>")
                 .append("let remaining=").append(remainingSeconds).append(";")
-                .append("let submitted=false;let examStarted=false;let ticking=false;")
+                .append("let submitted=false;let examStarted=false;let ticking=false;let exits=0;")
                 .append("const attemptId=").append(attempt.getId()).append(";const testId=").append(test.getId()).append(";")
                 .append("const timer=document.getElementById('timer');const form=document.getElementById('testForm');")
                 .append("const startButton=document.getElementById('startExam');const examLock=document.getElementById('examLock');")
@@ -637,12 +637,12 @@ public class WebQuizUI {
                 .append("const body='attemptId='+attemptId+'&details='+encodeURIComponent(details);")
                 .append("if(navigator.sendBeacon){navigator.sendBeacon('/student/cancel',new Blob([body],{type:'application/x-www-form-urlencoded'}));}")
                 .append("else{fetch('/student/cancel',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body,keepalive:true});}")
-                .append("alert('Test canceled because fullscreen was exited.');window.location.href='/student';}")
+                .append("alert('Test terminated because fullscreen was exited 3 times.');window.location.href='/student';}")
                 .append("function tick(){const m=Math.floor(remaining/60);const s=String(remaining%60).padStart(2,'0');timer.textContent=m+':'+s;if(!examStarted)return;if(remaining<=0){submitted=true;form.submit();return;}remaining--;}")
                 .append("tick();setInterval(tick,1000);")
                 .append("function showQuestions(){examStarted=true;form.classList.remove('locked-test');examLock.classList.add('hidden');data('FULLSCREEN_STARTED','Student started fullscreen exam mode.');}")
                 .append("startButton.addEventListener('click',async()=>{try{await document.documentElement.requestFullscreen?.();}catch(e){alert('Fullscreen permission is required to view questions.');}});")
-                .append("document.addEventListener('fullscreenchange',()=>{if(document.fullscreenElement){showQuestions();}else if(examStarted&&!submitted){cancelAttempt('Student exited fullscreen mode.');}});")
+                .append("document.addEventListener('fullscreenchange',()=>{if(document.fullscreenElement){showQuestions();}else if(examStarted&&!submitted){exits++;if(exits>=3){cancelAttempt('Student exited fullscreen mode 3 times.');}else{let left=3-exits;data('FULLSCREEN_EXIT_WARNING','Student exited fullscreen mode. Warning '+exits);alert('Full screen exited! Warning: '+left+' attempt(s) left. If you exit 3 times, the quiz will be terminated.');examStarted=false;form.classList.add('locked-test');examLock.classList.remove('hidden');}}});")
                 .append("document.addEventListener('visibilitychange',()=>{if(document.hidden&&!submitted){data('TAB_SWITCH','Student switched tab or minimized browser.');}});")
                 .append("window.history.pushState(null,'',window.location.href);window.addEventListener('popstate',()=>{window.history.pushState(null,'',window.location.href);data('BACK_BUTTON','Student tried to navigate back during the test.');alert('Back navigation is disabled during the test.');});")
                 .append("window.addEventListener('beforeunload',(event)=>{if(!submitted){data('RELOAD_OR_EXIT','Student tried to reload, close, or leave the test page.');event.preventDefault();event.returnValue='Test is in progress.';}});")
