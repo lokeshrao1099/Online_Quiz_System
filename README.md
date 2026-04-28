@@ -54,6 +54,8 @@ For a custom database user/password:
 java -Dquiz.db.user="root" -Dquiz.db.password="your_password" -cp ".;mysql-connector-j-9.7.0/mysql-connector-j-9.7.0.jar" AppLauncher
 ```
 
+**You can also change the Default username and password from /database/DBconnectiion.java**
+
 You can also override the database URL:
 
 ```powershell
